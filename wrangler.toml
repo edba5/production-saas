@@ -2,7 +2,7 @@ type = "javascript"
 name = "cms-headless"
 workers_dev = true
 # Add your account ID here
-account_id = ""
+account_id = "ab41dac3c361e6d9cadaeb1888cd9945"
 
 [build]
 command = "npm run build"
