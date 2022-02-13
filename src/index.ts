@@ -1,8 +1,9 @@
 // Dependencies
-import { Router } from 'worktop';
-import { convert } from 'worktop/sw';
-import * as Cache from 'worktop/cache';
+import { Router, compose } from 'worktop';
+import * as Cache from 'worktop/cfw.cache';
 import * as CORS from 'worktop/cors';
+import { toError } from 'lib/utils';
+import * as cfw from 'worktop/cfw';
 
 // Routes
 import * as Auth from './routes/auth';
@@ -16,11 +17,19 @@ import type { Context } from './lib/context';
 
 const API = new Router<Context>();
 
-API.prepare = CORS.preflight({
-	origin: '*', // TODO?
-	maxage: 86400, // 1 day
-	credentials: true,
-});
+API.prepare = compose(
+	Cache.sync(),
+	CORS.preflight({
+		origin: '*', // TODO?
+		maxage: 86400, // 1 day
+		credentials: true,
+	}),
+);
+
+API.onerror = function (req, context) {
+	let { error, status=500 } = context;
+	return toError(status, error);
+}
 
 API.add('POST', '/auth/login', Auth.login);
 API.add('POST', '/auth/register', Auth.register);
@@ -48,8 +57,6 @@ API.add('DELETE', '/spaces/:spaceid/schemas/:schemaid', Schemas.destroy);
 
 API.add('PUT', '/users/:userid', Users.update);
 
-// ESM format -> EventListener
-const handler = convert(API.run);
-
 // init: Service Worker
-Cache.listen(handler);
+// TODO: Migrate to Module Worker
+cfw.listen(API.run);
